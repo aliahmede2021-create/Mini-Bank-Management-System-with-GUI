@@ -647,5 +647,7 @@ def showMainMenu(account):
         tk.Button(menu_window, text=text, command=command, width=30).pack(pady=5)
     
 if __name__ == "__main__":
-    showLoginScreen()
+    root.title("Bank Login")
+    root.geometry("350x400")
+    showLoginScreen()  
     root.mainloop()
