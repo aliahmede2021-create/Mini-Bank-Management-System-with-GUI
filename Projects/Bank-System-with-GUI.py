@@ -2,6 +2,7 @@ import os
 import hashlib
 from PIL import Image, ImageTk
 import tkinter as tk
+import random
 from tkinter import messagebox
 from datetime import datetime
 
@@ -102,7 +103,7 @@ def updateAccount(id, password, new_id, new_name, new_gender, new_balance, new_p
         current_user = new_account
         raw_password = new_password
 
-      writeRecord(temp, new_account)
+    writeRecord(temp, new_account)
 
   os.remove("client.txt")
   os.rename("temp.txt", "client.txt")
@@ -197,9 +198,6 @@ def deleteAccount(id, password):
   os.remove("client.txt")
   os.rename("temp.txt", "client.txt")
 
-root = tk.Tk()
-root.withdraw() 
-
 def accountExists(id):
     if not os.path.exists("client.txt"):
       return False
@@ -208,14 +206,24 @@ def accountExists(id):
         account = readLineFunction(f)
         if account is None:
             break
-        if account["id"] == str(id):
+        if account["id"] == id:
             return True
     return False
+
+def generateRandomPassword(user_choice):
+   characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()"
+   password = ""
+   for i in range(user_choice):
+      password += random.choice(characters)
+   return password
+
+root = tk.Tk()
+root.withdraw() 
 
 def guiCreateAccount():
     createAccount_window = tk.Toplevel()
     createAccount_window.title("Create New Account")
-    createAccount_window.geometry("400x300")
+    createAccount_window.geometry("450x450")
     tk.Label(createAccount_window, text="Create a New Account", font=("Helvetica", 14, "bold")).pack(pady=10)
 
     tk.Label(createAccount_window, text="ID:").pack()
@@ -237,6 +245,33 @@ def guiCreateAccount():
     tk.Label(createAccount_window, text="Password:").pack()
     create_password_entry = tk.Entry(createAccount_window, show="*")
     create_password_entry.pack()
+    
+    tk.Label(createAccount_window, text="Enter the desired password length (minimum 8 characters):").pack()
+    password_length_entry = tk.Entry(createAccount_window)
+    password_length_entry.pack()
+
+    generated_password_label = tk.Label(createAccount_window, text="")
+    generated_password_label.pack(pady=5)
+
+    def generateAndFillPassword():
+       try:
+          length = int(password_length_entry.get())
+          if length < 8:
+             messagebox.showerror("Error", "Password length must be at least 8 characters.")
+             return
+          if length >= 50:
+             messagebox.showerror("Error", "Password length must be less than or equal to 50 characters.")
+             return
+          
+          generated_password = generateRandomPassword(length)
+          create_password_entry.delete(0, tk.END)
+          create_password_entry.insert(0, generated_password)
+
+          generated_password_label.config(text=f"Generated Password: {generated_password}")
+       except ValueError:
+          messagebox.showerror("Error", "Please enter a valid number for password length.")
+
+    tk.Button(createAccount_window, text="Generate Random Password", command=generateAndFillPassword).pack(pady=5)
 
     def toCreateAccount():
        try:
@@ -265,6 +300,10 @@ def guiCreateAccount():
           if not create_password:
             messagebox.showerror("Error", "Password cannot be empty.")
             return
+          
+          if len(create_password) < 8:
+            messagebox.showerror("Error", "Password must be at least 8 characters long.")
+            return
 
           createAccount(create_id, create_name, create_gender, create_balance, create_password)
           messagebox.showinfo("Success", "Account created successfully!")
@@ -274,19 +313,21 @@ def guiCreateAccount():
           messagebox.showerror("Error", "Please enter valid input for ID and Balance")
     tk.Button(createAccount_window, text="Create Account", command=toCreateAccount, bg="green", fg="white").pack(pady=10)
 
+    tk.Button(createAccount_window, text="Cancel", command=lambda: (createAccount_window.destroy(), showLoginScreen()), bg="red", fg="white").pack()
+
 def showLoginScreen():
     login_window = tk.Toplevel()
     login_window.title("Bank Login")
-    login_window.geometry("400x250")
+    login_window.geometry("350x400")
 
     global logo
-    logo_img = Image.open("images/Logo-3.jpg")
+    logo_img = Image.open("Projects/images/Logo.jpg")
     logo_img = logo_img.resize((150, 150))
     logo = ImageTk.PhotoImage(logo_img)
 
     tk.Label(login_window, image=logo).pack(pady=10)
 
-    tk.Label(login_window, font=("Helvetica", 12, "bold")).pack(pady=5)
+    tk.Label(login_window, text="MESA VERDE BANK AND TRUST", font=("Helvetica", 12, "bold")).pack(pady=5)
     
     tk.Label(login_window, text="ID:").pack()
     id_entry = tk.Entry(login_window)
@@ -319,17 +360,24 @@ def showLoginScreen():
 def showMainMenu(account):
     menu_window = tk.Toplevel()
     menu_window.title(f"Welcome, {current_user['name']}")
-    menu_window.geometry("400x400")
+    menu_window.geometry("400x550")
 
-    bg_img = Image.open("images/Logo.jpg")
-    bg_img = ImageTk.PhotoImage(bg_img)
+    original_bg = Image.open("Projects/images/Logo-4.jpg")
+    bg_label = tk.Label(menu_window)
+    bg_label.place(x=0, y=0, relwidth=1, relheight=1) 
+    bg_label.lower()
 
-    canvas = tk.Canvas(menu_window, width=400, height=150)
-    canvas.pack(fill="both", expand=True)
-    canvas.create_image(0, 0, anchor="nw", image=bg_img)
+    def resizeBg(event):
+       if event.widget != menu_window:
+          return 
+       
+       resized = original_bg.resize((event.width, event.height))
+       bg_img = ImageTk.PhotoImage(resized)
+       bg_label.config(image=bg_img)
+       bg_label.image = bg_img
 
-    canvas.create_window(200, 50, window=tk.Label(menu_window, text="MESA VERDE BANK AND TRUST", font=("Helvetica", 16, "bold"), bg="white"))
-    
+    menu_window.bind("<Configure>", resizeBg)
+
     welcome_text = f"Welcome, {current_user['name']}!\nBalance: {current_user['balance']}"
     tk.Label(menu_window, text=welcome_text, font=("Helvetica", 12)).pack(pady=10)
     
@@ -364,8 +412,6 @@ def showMainMenu(account):
                 deposit(current_user["id"], raw_password, amount)
                 messagebox.showinfo("Success", f"Deposited ${amount:.2f}\nNew balance: ${float(current_user['balance']):.2f}")
                 deposit_window.destroy()
-                menu_window.destroy()
-                showMainMenu(account)
             except ValueError:
                 messagebox.showerror("Error", "Please enter a valid number")
         
@@ -392,8 +438,6 @@ def showMainMenu(account):
                 withdrawal(current_user["id"], raw_password, amount)
                 messagebox.showinfo("Success", f"Withdrew ${amount:.2f}")
                 withdraw_window.destroy()
-                menu_window.destroy()
-                showMainMenu(account)
             except ValueError:
                 messagebox.showerror("Error", "Please enter a valid number")
         
@@ -403,7 +447,7 @@ def showMainMenu(account):
     def guiUpdateAccount():
        update_window = tk.Toplevel(menu_window)
        update_window.title("Update Account")
-       update_window.geometry("300x150")
+       update_window.geometry("350x450")
        
        tk.Label(update_window, text="To update your account details, press 'Update'. To cancel, press 'Cancel'").pack(pady=10)
 
@@ -426,6 +470,31 @@ def showMainMenu(account):
        tk.Label(update_window, text="Enter new Password").pack()
        new_password_entry = tk.Entry(update_window, show="*")
        new_password_entry.pack()
+
+       tk.Label(update_window, text="Enter the desired password length (minimum 8 characters):").pack()
+       new_password_length_entry = tk.Entry(update_window)
+       new_password_length_entry.pack()
+
+       newly_generated_password_label = tk.Label(update_window, text="")
+       newly_generated_password_label.pack(pady=5)   
+
+       def generateAndFillPassword():
+        try:
+            length = int(new_password_length_entry.get())
+            if length < 8:
+              messagebox.showerror("Error", "Password length must be at least 8 characters.")
+              return
+            if length >= 50:
+              messagebox.showerror("Error", "Password length must be less than or equal to 50 characters.")
+              return
+            
+            generated_password = generateRandomPassword(length)
+            new_password_entry.delete(0, tk.END)
+            new_password_entry.insert(0, generated_password)
+
+            newly_generated_password_label.config(text=f"Generated Password: {generated_password}")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a valid number for password length.")
 
        def toUpdateAccount():
          try:
@@ -454,6 +523,10 @@ def showMainMenu(account):
             if not new_password:
               messagebox.showerror("Error", "Password cannot be empty.")
               return
+            
+            if len(new_password) < 8:
+               messagebox.showerror("Error", "Password must be at least 8 characters long.")
+               return
          
             updateAccount(current_user["id"], raw_password, new_id, new_name, new_gender, new_balance, new_password)
             messagebox.showinfo("Account Updated", "Your account details have been updated.")
@@ -461,6 +534,8 @@ def showMainMenu(account):
             messagebox.showerror("Error", "Please enter valid input for ID and Balance")
 
        tk.Button(update_window, text="Update", command=toUpdateAccount, bg="blue", fg="white").pack(pady=10)
+
+       tk.Button(update_window, text="Generate Random Password", command=generateAndFillPassword, bg="lightgreen", fg="black").pack(pady=5)
 
        tk.Button(update_window, text="Cancel", command=update_window.destroy, bg="red", fg="white").pack(pady=10)
 
@@ -517,7 +592,7 @@ def showMainMenu(account):
             if os.path.exists("transactions.txt"):
                 with open("transactions.txt", "r") as f:
                     transactions = f.readlines()
-                    user_transactions = [t for t in transactions if f"Account ID: {current_user['id']}" in t]
+                    user_transactions = [t for t in transactions if f"Account ID: {current_user['id']} |" in t]
                     
                     if user_transactions:
                         for trans in user_transactions[-10:]:  
@@ -536,14 +611,14 @@ def showMainMenu(account):
     def guiDelete():
        window_delete = tk.Toplevel(menu_window)
        window_delete.title("Delete Account")
-       window_delete.geometry("300x150")
+       window_delete.geometry("400x150")
 
        tk.Label(window_delete, text="If you want to delete your account, press 'Yes'. If you don't, press 'No'").pack(pady=10)
 
        def doDelete():
+          window_delete.destroy()
           deleteAccount(current_user["id"], raw_password)
           messagebox.showinfo("Account Deleted", "Your account has been deleted.")
-          window_delete.destroy()
           menu_window.destroy()
           showLoginScreen()
 
